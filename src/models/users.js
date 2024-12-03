@@ -3,10 +3,10 @@ import { USER_STATUS } from "../constants/index.js";
 
 const userSchema = new Schema(
   {
-    userName: {
+    /*  userName: {
       type: String,
       default: null,
-    },
+    }, */
     password: {
       type: String,
       required: true,

@@ -7,6 +7,8 @@ const tripRouter = express.Router();
 tripRouter.post("/", checkLogin, isAdmin, TripController.createTrip);
 tripRouter.get("/", checkLogin, TripController.getTrips);
 tripRouter.get("/search", TripController.getTripsByRoute);
+tripRouter.get("/trip-top", checkLogin, TripController.getTripTop);
+tripRouter.get("/trip-stats", checkLogin, TripController.getTripStats);
 tripRouter.get("/:id/busseats", TripController.getBusAndSeatsByTripId);
 tripRouter.get("/:id", checkLogin, TripController.getTrip);
 tripRouter.put("/:id", checkLogin, isAdmin, TripController.updateTrip);

@@ -221,16 +221,8 @@ const AuthController = {
   }, */
   /* Đăng ký. Update 02/12 . Phân quyền khi thêm người dùng ở webadmin - đã hoàn thành */
   signUp: async (req, res) => {
-    const {
-      userName,
-      password,
-      email,
-      phoneNumber,
-      fullName,
-      cccd,
-      role,
-      status,
-    } = req.body;
+    const { password, email, phoneNumber, fullName, cccd, role, status } =
+      req.body;
 
     try {
       // Kiểm tra xem email hoặc số điện thoại đã tồn tại chưa
@@ -260,7 +252,6 @@ const AuthController = {
 
       // Lưu thông tin người dùng mới
       const user = await new User({
-        userName,
         password: hashedPassword,
         email,
         phoneNumber,
@@ -377,11 +368,9 @@ const AuthController = {
 
       // Kiểm tra trạng thái người dùng
       if (findUser.status === "INACTIVE") {
-        return res
-          .status(403)
-          .json({
-            message: "Tài khoản của bạn đang bị khóa, không thể đăng nhập",
-          });
+        return res.status(403).json({
+          message: "Tài khoản của bạn đang bị khóa, không thể đăng nhập",
+        });
       }
 
       // Kiểm tra mật khẩu

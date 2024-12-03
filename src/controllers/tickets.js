@@ -20,6 +20,7 @@ import Seats from "../models/seats.js";
 import Permission from "../models/permissions.js";
 import BusRoutes from "../models/busRoutes.js";
 import qs from "qs";
+import moment from "moment";
 import crypto from "crypto";
 import dayjs from "dayjs";
 import { createPaymentToken } from "../utils/zalopayService.js";
@@ -419,7 +420,7 @@ const TicketController = {
             }
           }
         }
-      }, 1 * 60 * 1000); // 10 phút
+      }, 30 * 60 * 1000); // 10 phút
 
       // Lấy thông tin chi tiết vé
       const ticketInfo = await Tickets.findById(ticket._id)
@@ -897,6 +898,144 @@ const TicketController = {
     } catch (error) {
       console.error("Error occurred:", error.message); // Log the error if it occurs
       res.status(500).json({ error: error.message });
+    }
+  },
+  getRevenue: async (req, res) => {
+    try {
+      const { type, startDate, endDate } = req.query;
+
+      if (!type || !startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required parameters: type, startDate, or endDate",
+        });
+      }
+
+      const start = moment(startDate);
+      const end = moment(endDate);
+
+      if (!start.isValid() || !end.isValid()) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid date format",
+        });
+      }
+
+      const matchStage = {
+        status: "PAID",
+        updatedAt: {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        },
+      };
+
+      let groupByField;
+      let dateFormat;
+      let timeRange = [];
+
+      if (type === "day") {
+        groupByField = {
+          $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" },
+        };
+        dateFormat = "YYYY-MM-DD";
+        for (let m = moment(start); m.isSameOrBefore(end); m.add(1, "days")) {
+          timeRange.push(m.format(dateFormat));
+        }
+      } else if (type === "month") {
+        groupByField = {
+          $dateToString: { format: "%Y-%m", date: "$updatedAt" },
+        };
+        dateFormat = "YYYY-MM";
+        for (let m = moment(start); m.isSameOrBefore(end); m.add(1, "months")) {
+          timeRange.push(m.format(dateFormat));
+        }
+      } else if (type === "year") {
+        groupByField = {
+          $year: "$updatedAt",
+        };
+        dateFormat = "YYYY";
+        for (let year = start.year(); year <= end.year(); year++) {
+          timeRange.push(year.toString());
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid type parameter. Use "day", "month", or "year".',
+        });
+      }
+
+      const revenueStats = await Tickets.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: groupByField,
+            totalAmount: { $sum: "$totalAmount" },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]);
+
+      // Bổ sung dữ liệu bị thiếu và định dạng đúng với `RevenueStats.tsx`
+      const mappedData = timeRange.map((time) => {
+        const found = revenueStats.find((item) => item._id.toString() === time);
+        return {
+          label: time, // Field `label` để phù hợp với component React
+          totalAmount: found ? found.totalAmount : 0,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: mappedData, // Định dạng đúng cho `RevenueStats.tsx`
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  getTopUsers: async (req, res) => {
+    try {
+      // Truy vấn 1: Tính số lượng vé đã đặt cho từng người dùng
+      const topUsersStats = await Tickets.aggregate([
+        {
+          $group: {
+            _id: "$user", // Nhóm theo `userId`
+            bookingCount: { $sum: 1 }, // Đếm số vé đặt
+          },
+        },
+        { $sort: { bookingCount: -1 } }, // Sắp xếp giảm dần theo số vé
+        { $limit: 5 }, // Lấy 5 người dùng có số vé cao nhất
+      ]);
+
+      // Truy vấn 2: Lấy thông tin chi tiết của người dùng
+      const userIds = topUsersStats.map((user) => user._id); // Lấy danh sách userId từ kết quả đầu tiên
+      const users = await User.find({ _id: { $in: userIds } }); // Lấy thông tin chi tiết người dùng từ bảng User
+
+      // Ghép thông tin người dùng với số vé đã đặt
+      const topUsers = topUsersStats.map((stat) => {
+        const user = users.find(
+          (user) => user._id.toString() === stat._id.toString()
+        );
+        return {
+          _id: stat._id,
+          name: user ? user.fullName : "N/A", // Nếu không tìm thấy thì trả về 'N/A'
+          email: user ? user.email : "N/A", // Nếu không tìm thấy thì trả về 'N/A'
+          bookingCount: stat.bookingCount,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: topUsers, // Trả về danh sách top người dùng với số lượng vé đặt
+      });
+    } catch (error) {
+      console.error("Error fetching top users:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching top users.",
+      });
     }
   },
 };

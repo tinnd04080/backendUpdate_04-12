@@ -10,12 +10,7 @@ promotionRouter.post(
   isAdmin,
   PromotionController.createPromotion
 );
-promotionRouter.get(
-  "/",
-  checkLogin,
-  isAdmin,
-  PromotionController.getPromotions
-);
+promotionRouter.get("/", checkLogin, PromotionController.getPromotions);
 promotionRouter.get(
   "/:code",
   checkLogin,

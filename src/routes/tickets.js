@@ -4,7 +4,9 @@ import TicketController from "../controllers/tickets.js";
 
 const ticketRouter = express.Router();
 
-ticketRouter.get("/", checkLogin, isAdmin, TicketController.getTickets);
+ticketRouter.get("/", checkLogin, TicketController.getTickets);
+ticketRouter.get("/revenue-stats", checkLogin, TicketController.getRevenue);
+ticketRouter.get("/user-top", checkLogin, TicketController.getTopUsers);
 ticketRouter.get("/me", checkLogin, TicketController.getMyTickets);
 ticketRouter.post("/callbackPay", TicketController.callbackPay);
 ticketRouter.post("/create", checkLogin, TicketController.createTicket);

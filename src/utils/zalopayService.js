@@ -25,7 +25,7 @@ export async function createPaymentToken(orderInfo, amount) {
     description: `Lazada - Payment for the order #${transID}`,
     bank_code: "",
     callback_url:
-      "https://6e0e-171-234-12-31.ngrok-free.app/api/tickets/callbackPay", // ngrok localhost 8080 . Nhập vào ngrok http 8080
+      "https://bbfc-171-234-12-31.ngrok-free.app/api/tickets/callbackPay", // ngrok localhost 8080 . Nhập vào ngrok http 8080
   };
 
   const data =
